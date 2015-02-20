@@ -546,7 +546,8 @@ public class ApnsConnection<T extends ApnsPushNotification> {
 									}
 								} else {
 									apnsConnection.sentNotificationBuffer.addSentNotification(sendableNotification);
-								}
+                                    apnsConnection.listener.handleSentNotification(apnsConnection, notification);
+                                }
 							} else {
 								log.trace("{} failed to write notification {}",
 										apnsConnection.name, sendableNotification, writeFuture.cause());

@@ -117,6 +117,8 @@ public class PushManager<T extends ApnsPushNotification> implements ApnsConnecti
 	private final List<ExpiredTokenListener<? super T>> expiredTokenListeners =
 			new ArrayList<ExpiredTokenListener<? super T>>();
 
+    private final List<SentNotificationListener<? super T>> sentNotificationListeners = new ArrayList<SentNotificationListener<? super T>>();
+
 	private Thread dispatchThread;
 	private boolean dispatchThreadShouldContinue = true;
 
@@ -423,7 +425,11 @@ public class PushManager<T extends ApnsPushNotification> implements ApnsConnecti
 			this.expiredTokenListeners.clear();
 		}
 
-		if (this.shouldShutDownListenerExecutorService) {
+        synchronized (this.sentNotificationListeners) {
+            this.sentNotificationListeners.clear();
+        }
+
+        if (this.shouldShutDownListenerExecutorService) {
 			this.listenerExecutorService.shutdown();
 		}
 
@@ -569,6 +575,21 @@ public class PushManager<T extends ApnsPushNotification> implements ApnsConnecti
 			return this.expiredTokenListeners.remove(listener);
 		}
 	}
+
+    public void registerSentNotifiactionListener(final SentNotificationListener<? super T> listener) {
+        if (this.isShutDown()) {
+            throw new IllegalStateException("Expired token listeners may not be registered after a push manager has been shut down.");
+        }
+        synchronized (this.sentNotificationListeners) {
+            this.sentNotificationListeners.add(listener);
+        }
+    }
+
+    public boolean unregisterSentNotifiactionListener(final ExpiredTokenListener<? super T> listener) {
+        synchronized (this.sentNotificationListeners) {
+            return this.sentNotificationListeners.remove(listener);
+        }
+    }
 
 	/**
 	 * <p>Begins an asynchronous attempt to get a list of expired tokens from the feedback service. Be warned that this
@@ -832,7 +853,16 @@ public class PushManager<T extends ApnsPushNotification> implements ApnsConnecti
 		this.dispatchThread.interrupt();
 	}
 
-	private void startNewConnection() {
+    @Override
+    public void handleSentNotification(ApnsConnection<T> connection, T notifiaction) {
+        synchronized (this.sentNotificationListeners) {
+            for (final SentNotificationListener<? super T> listener : this.sentNotificationListeners) {
+                listener.notificationSent(this, notifiaction);
+            }
+        }
+    }
+
+    private void startNewConnection() {
 		synchronized (this.activeConnections) {
 			final ApnsConnection<T> connection = new ApnsConnection<T>(this.environment, this.sslContext,
 					this.eventLoopGroup, this.configuration.getConnectionConfiguration(), this,

@@ -57,6 +57,7 @@ public class ApnsConnectionTest extends BasePushyTest {
 		private Throwable connectionFailureCause;
 
 		private final ArrayList<SimpleApnsPushNotification> writeFailures = new ArrayList<SimpleApnsPushNotification>();
+        private final ArrayList<SimpleApnsPushNotification> sentNotifications = new ArrayList<SimpleApnsPushNotification>();
 
 		private SimpleApnsPushNotification rejectedNotification;
 		private RejectedNotificationReason rejectionReason;
@@ -120,7 +121,12 @@ public class ApnsConnectionTest extends BasePushyTest {
 			this.unprocessedNotifications.addAll(unprocessedNotifications);
 		}
 
-		@Override
+        @Override
+        public void handleSentNotification(ApnsConnection<SimpleApnsPushNotification> connection, SimpleApnsPushNotification notifiaction) {
+            this.sentNotifications.add(notifiaction);
+        }
+
+        @Override
 		public void handleConnectionWritabilityChange(final ApnsConnection<SimpleApnsPushNotification> connection, final boolean writable) {
 		}
 	}

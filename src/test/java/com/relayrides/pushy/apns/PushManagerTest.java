@@ -402,6 +402,8 @@ public class PushManagerTest extends BasePushyTest {
 		final int iterations = 1000;
 
 		final CountDownLatch latch = this.getApnsServer().getAcceptedNotificationCountDownLatch(iterations);
+        final TestSentNotificationListener listener = new TestSentNotificationListener();
+        this.getPushManager().registerSentNotifiactionListener(listener);
 
 		for (int i = 0; i < iterations; i++) {
 			this.getPushManager().getQueue().add(this.createTestNotification());
@@ -409,6 +411,7 @@ public class PushManagerTest extends BasePushyTest {
 
 		this.getPushManager().start();
 		this.waitForLatch(latch);
+        assertEquals(iterations, listener.getNotificationCount());
 		this.getPushManager().shutdown();
 	}
 
@@ -534,4 +537,22 @@ public class PushManagerTest extends BasePushyTest {
 		// timed shutdown with a very short fuse.
 		testManager.shutdown(1);
 	}
+
+
+    private class TestSentNotificationListener implements SentNotificationListener<SimpleApnsPushNotification> {
+
+        private final AtomicInteger notificationCount = new AtomicInteger(0);
+
+        @Override
+        public void notificationSent(final PushManager<? extends SimpleApnsPushNotification> pushManager, final SimpleApnsPushNotification notification) {
+            this.notificationCount.incrementAndGet();
+        }
+
+        public int getNotificationCount() {
+            return this.notificationCount.get();
+        }
+    }
+
+
+
 }
